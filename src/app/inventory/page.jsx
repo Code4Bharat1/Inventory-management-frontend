@@ -1,9 +1,9 @@
 import React from 'react'
-import Dashboard from '@/components/dashboard/Dashboard'
+import Inventory from '@/components/inventory/Inventory'
 export default function page() {
   return (
     <div>
-      <Dashboard />
+        <Inventory />
     </div>
   )
 }
