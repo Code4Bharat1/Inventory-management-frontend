@@ -14,7 +14,6 @@ const Tooltip = ({ text }) => (
   </div>
 );
 
-
 const CreateProductForm = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -53,11 +52,14 @@ const CreateProductForm = () => {
       if (formData.image) {
         data.append("image", formData.image);
       }
+      console.log("FormData contents:");
+      for (let pair of data.entries()) {
+        console.log(pair[0] + ":", pair[1]);
+      }
 
       const response = await axios.post(
         "http://localhost:8080/api/products/create-product",
-        data,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        data
       );
 
       console.log("Product created:", response.data);
@@ -82,7 +84,6 @@ const CreateProductForm = () => {
     <div className="w-full mx-auto p-8 bg-white rounded-2xl shadow space-y-6 border border-gray-200">
       <h2 className="text-2xl font-semibold text-gray-800">Create Product</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
-
         {/* Product Name */}
         <div className="w-full max-w-lg">
           <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
@@ -230,8 +231,12 @@ const CreateProductForm = () => {
         {/* Image Upload */}
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 p-6 rounded-lg text-center hover:border-blue-400 transition">
           <Upload className="w-8 h-8 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-600">Drag and drop an image here, or click to browse</p>
-          <p className="text-xs text-gray-400 mb-2">Recommended size: 1024×1024px</p>
+          <p className="text-sm text-gray-600">
+            Drag and drop an image here, or click to browse
+          </p>
+          <p className="text-xs text-gray-400 mb-2">
+            Recommended size: 1024×1024px
+          </p>
           <input
             type="file"
             onChange={handleImageUpload}
