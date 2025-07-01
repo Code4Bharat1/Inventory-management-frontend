@@ -30,20 +30,25 @@ const Sidebar = () => {
       <h2 className="text-2xl font-bold text-gray-800 mb-8">InventoryPro</h2>
 
       <nav className="flex-1">
-        {menuItems.map((item) => (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={`flex items-center gap-3 p-2.5 my-2 rounded-lg transition-all ${
-              pathname === item.href
-                ? 'bg-blue-100 text-blue-600 font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <span>{item.icon}</span>
-            <span>{item.name}</span>
-          </Link>
-        ))}
+        {menuItems.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`flex items-center gap-3 p-2.5 my-2 rounded-lg transition-all ${
+                isActive
+                  ? 'bg-blue-100 text-blue-600 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <span>{item.icon}</span>
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="pt-4 border-t border-gray-200">

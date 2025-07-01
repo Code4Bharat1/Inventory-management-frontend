@@ -4,6 +4,8 @@ import { useState } from "react";
 import axios from "axios";
 import { Upload } from "lucide-react";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
+import Link from "next/link";
 
 const Tooltip = ({ text }) => (
   <div className="group relative flex items-center">
@@ -29,11 +31,26 @@ const CreateProductForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleImageUpload = (e) => {
-    setFormData({ ...formData, image: e.target.files[0] });
+    setFormData((prev) => ({ ...prev, image: e.target.files[0] }));
+  };
+
+  const handleClearForm = () => {
+    setFormData({
+      name: "",
+      category: "",
+      stock: "",
+      price: "",
+      description: "",
+      note: "",
+      minimumStock: "",
+      sku: "",
+      image: null,
+    });
+    toast.success("Form reset");
   };
 
   const handleSubmit = async (e) => {
@@ -52,17 +69,13 @@ const CreateProductForm = () => {
       if (formData.image) {
         data.append("image", formData.image);
       }
-      console.log("FormData contents:");
-      for (let pair of data.entries()) {
-        console.log(pair[0] + ":", pair[1]);
-      }
 
       const response = await axios.post(
-        "http://localhost:8080/api/products/create-product",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/create-product`,
         data
       );
 
-      console.log("Product created:", response.data);
+      toast.success("Product created successfully");
 
       setFormData({
         name: "",
@@ -76,7 +89,8 @@ const CreateProductForm = () => {
         image: null,
       });
     } catch (error) {
-      console.error("Error creating product:", error);
+      console.error("Error creating product:", error.response?.data || error.message);
+      toast.error(`❌ ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -84,11 +98,10 @@ const CreateProductForm = () => {
     <div className="w-full mx-auto p-8 bg-white rounded-2xl shadow space-y-6 border border-gray-200">
       <h2 className="text-2xl font-semibold text-gray-800">Create Product</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
+
         {/* Product Name */}
         <div className="w-full max-w-lg">
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            Product Name
-          </label>
+          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">Product Name</label>
           <input
             type="text"
             name="name"
@@ -134,11 +147,9 @@ const CreateProductForm = () => {
           />
         </div>
 
-        {/* Stock */}
+        {/* Stock Quantity */}
         <div className="w-full max-w-lg">
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            Stock Quantity
-          </label>
+          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
           <input
             type="number"
             name="stock"
@@ -152,9 +163,7 @@ const CreateProductForm = () => {
 
         {/* Price */}
         <div className="w-full max-w-lg">
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            Price
-          </label>
+          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">Price</label>
           <input
             type="number"
             name="price"
@@ -168,9 +177,7 @@ const CreateProductForm = () => {
 
         {/* Description */}
         <div className="w-full max-w-lg">
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            Description (optional)
-          </label>
+          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
           <textarea
             name="description"
             value={formData.description}
@@ -183,9 +190,7 @@ const CreateProductForm = () => {
 
         {/* Note */}
         <div className="w-full max-w-lg">
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            Note (optional)
-          </label>
+          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
           <textarea
             name="note"
             value={formData.note}
@@ -231,12 +236,8 @@ const CreateProductForm = () => {
         {/* Image Upload */}
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 p-6 rounded-lg text-center hover:border-blue-400 transition">
           <Upload className="w-8 h-8 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-600">
-            Drag and drop an image here, or click to browse
-          </p>
-          <p className="text-xs text-gray-400 mb-2">
-            Recommended size: 1024×1024px
-          </p>
+          <p className="text-sm text-gray-600">Drag and drop an image here, or click to browse</p>
+          <p className="text-xs text-gray-400 mb-2">Recommended size: 1024×1024px</p>
           <input
             type="file"
             onChange={handleImageUpload}
@@ -252,12 +253,19 @@ const CreateProductForm = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-2">
-          <button
-            type="button"
+        <div className="flex justify-end gap-3 pt-2 flex-wrap">
+          <Link
+            href="/inventory"
             className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
           >
             Cancel
+          </Link>
+          <button
+            type="button"
+            onClick={handleClearForm}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+          >
+            Clear All
           </button>
           <button
             type="submit"

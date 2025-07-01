@@ -15,7 +15,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8080/api/dashboard/inventoryDashboard"
+          `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/inventoryDashboard`
         );
         setData(response.data);
         console.log(response.data);

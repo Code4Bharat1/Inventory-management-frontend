@@ -37,7 +37,7 @@ const Filters = ({ onFilter }) => {
     const updatedFilters = { ...selectedFilters, [name]: value };
     setSelectedFilters(updatedFilters);
     try {
-      const response = await axios.get('http://localhost:8080/api/products/get-products', { params: updatedFilters });
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/products/get-products`, { params: updatedFilters });
       if (onFilter) onFilter(response.data);
     } catch (error) {
       console.error('Error fetching filtered products:', error);

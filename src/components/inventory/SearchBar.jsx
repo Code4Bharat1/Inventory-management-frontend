@@ -11,7 +11,7 @@ const SearchBar = ({ onResults }) => {
     const value = e.target.value;
     setQuery(value);
     try {
-      const response = await axios.get('http://localhost:8080/api/products/get-products', { params: { search: value } });
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/products/get-products`, { params: { search: value } });
       if (onResults) {
         onResults(response.data);
       }
