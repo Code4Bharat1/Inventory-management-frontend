@@ -1,5 +1,5 @@
 import React from "react";
-import CategoryManagement from "@/components/category/category";
+import CategoryManagement from "@/components/Store/category";
 
 const CategoryPage = () => {
   return (

@@ -6,19 +6,19 @@ import SearchBar from "./SearchBar";
 import Filters from "./Filter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import DeleteConfirmationModal from "../product/DeleteProduct.jsx";
 
 const Table = () => {
   const [products, setProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5; // Rows per page
+  const rowsPerPage = 5;
   const router = useRouter();
-
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const fetchProducts = async (filterParams = {}) => {
     try {
@@ -30,12 +30,47 @@ const Table = () => {
       setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching products:", error);
+      toast.error("Failed to fetch products.");
     }
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
+      toast.error("Please upload a CSV or Excel file.");
+      return;
+    }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/upload-products`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      toast.success("Products uploaded successfully.");
+      fetchProducts(); // Refresh the table
+    } catch (error) {
+      console.error("Error uploading products:", error);
+      toast.error("Failed to upload products.");
+    } finally {
+      setUploading(false);
+      event.target.value = null; // Reset file input
+    }
+  };
 
   const indexOfLastProduct = currentPage * rowsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - rowsPerPage;
@@ -67,7 +102,7 @@ const Table = () => {
       );
       toast.success("Product deleted successfully.");
       setShowDeleteModal(false);
-      fetchProducts(); // Refresh the table
+      fetchProducts();
     } catch (error) {
       console.error("Error deleting product:", error);
       toast.error("Failed to delete product.");
@@ -87,13 +122,26 @@ const Table = () => {
             View, filter, and manage your product inventory with ease.
           </p>
         </div>
-        <Link
-          href="/inventory/create-product"
-          className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg mb-3 hover:bg-blue-700 transition"
-        >
-          <Plus size={18} />
-          New Product
-        </Link>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center justify-center gap-2 bg-green-600 text-white py-3 px-6 rounded-lg cursor-pointer hover:bg-green-700 transition">
+            <Upload size={18} />
+            {uploading ? "Uploading..." : "Upload Products"}
+            <input
+              type="file"
+              accept=".csv,.xlsx"
+              onChange={handleFileUpload}
+              className="hidden"
+              disabled={uploading}
+            />
+          </label>
+          <Link
+            href="/inventory/create-product"
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus size={18} />
+            New Product
+          </Link>
+        </div>
       </div>
 
       <SearchBar onResults={setProducts} />
