@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import NotificationCard from "./NotificationCard";
+import OrderNotificationCard from "./OrderNotificationCard"; // ✅ Added for order notifications
 import Search from "../inventory/SearchBar.jsx";
 
 const base_url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -37,26 +38,47 @@ function getDateLabel(dateString) {
 }
 
 export default function Notification() {
-  const [notifications, setNotifications] = useState([]);
+  const [productNotifications, setProductNotifications] = useState([]);
+  const [orderNotifications, setOrderNotifications] = useState([]); // ✅ Added for order notifications
   const [searchQuery, setSearchQuery] = useState("");
 
+  const ownerId = "user_001"; // ✅ Replace with your ownerId or fetch dynamically
+
+  // Fetch product notifications
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const fetchProductNotifications = async () => {
       try {
         const token = localStorage.getItem("token");
         if (token) {
           axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         }
         const response = await axios.get(`${base_url}/api/notification`);
-        setNotifications(response.data || []);
+        setProductNotifications(response.data || []);
       } catch (error) {
-        console.error("Failed to fetch notifications:", error.response?.data || error.message);
-        alert("Failed to fetch notifications: " + (error.response?.data?.error || error.message));
+        console.error("Failed to fetch product notifications:", error.response?.data || error.message);
+        alert("Failed to fetch product notifications: " + (error.response?.data?.error || error.message));
       }
     };
-    fetchNotifications();
+    fetchProductNotifications();
   }, []);
 
+  // ✅ Fetch order notifications
+  useEffect(() => {
+    const fetchOrderNotifications = async () => {
+      try {
+        const response = await axios.get(`${base_url}/api/notifications`, {
+          params: { ownerId },
+        });
+        setOrderNotifications(response.data || []);
+      } catch (error) {
+        console.error("Failed to fetch order notifications:", error.response?.data || error.message);
+        alert("Failed to fetch order notifications: " + (error.response?.data?.error || error.message));
+      }
+    };
+    fetchOrderNotifications();
+  }, []);
+
+  // Toggle read/unread for product notifications
   const handleMarkAsRead = async (notificationId, currentIsRead, title) => {
     try {
       const token = localStorage.getItem("token");
@@ -68,7 +90,7 @@ export default function Notification() {
         { isRead: !currentIsRead },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setNotifications((prevNotifications) =>
+      setProductNotifications((prevNotifications) =>
         prevNotifications.map((notif) =>
           notif.id === notificationId ? { ...notif, isRead: !currentIsRead } : notif
         )
@@ -79,32 +101,36 @@ export default function Notification() {
     }
   };
 
-  const filteredNotifications = notifications.filter(
+  const filteredProductNotifications = productNotifications.filter(
     (notif) =>
       notif.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       notif.message.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const groupedNotifications = groupNotificationsByDate(filteredNotifications);
+  const groupedProductNotifications = groupNotificationsByDate(filteredProductNotifications);
+  const groupedOrderNotifications = groupNotificationsByDate(orderNotifications); // ✅ Grouping for order notifications
 
   return (
     <div className="min-h-screen bg-white p-6">
-      <h1 className="text-2xl font-semibold mb-1">Notification</h1>
+      <h1 className="text-2xl font-semibold mb-1">Notifications</h1>
       <p className="text-sm text-gray-500 mb-4">
-        Manage your product notifications, track inventory levels, and update product details.
+        Manage your product and order notifications.
       </p>
       <div className="flex items-center rounded-md p-2 mb-4">
         <Search value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
       </div>
+
+      {/* ✅ Product Notifications Section */}
+      <h2 className="text-xl font-semibold mt-6 mb-2">Product Notifications</h2>
       <div className="px-4 flex flex-col space-y-4">
-        {Object.keys(groupedNotifications).length > 0 ? (
-          Object.keys(groupedNotifications)
-            .sort((a, b) => new Date(b) - new Date(a)) // Sort by latest date first
+        {Object.keys(groupedProductNotifications).length > 0 ? (
+          Object.keys(groupedProductNotifications)
+            .sort((a, b) => new Date(b) - new Date(a))
             .map((dateKey) => (
               <div key={dateKey}>
-                <h2 className="text-lg font-semibold mb-2">{getDateLabel(dateKey)}</h2>
+                <h3 className="text-lg font-semibold mb-2">{getDateLabel(dateKey)}</h3>
                 <div className="flex flex-col space-y-2">
-                  {groupedNotifications[dateKey].map((notification) => (
+                  {groupedProductNotifications[dateKey].map((notification) => (
                     <NotificationCard
                       key={notification.id}
                       notificationId={notification.id}
@@ -121,7 +147,31 @@ export default function Notification() {
               </div>
             ))
         ) : (
-          <p className="text-gray-500 text-center">No notifications found</p>
+          <p className="text-gray-500 text-center">No product notifications found</p>
+        )}
+      </div>
+
+      {/* ✅ Order Notifications Section */}
+      <h2 className="text-xl font-semibold mt-10 mb-2">Order Notifications</h2>
+      <div className="px-4 flex flex-col space-y-4">
+        {Object.keys(groupedOrderNotifications).length > 0 ? (
+          Object.keys(groupedOrderNotifications)
+            .sort((a, b) => new Date(b) - new Date(a))
+            .map((dateKey) => (
+              <div key={dateKey}>
+                <h3 className="text-lg font-semibold mb-2">{getDateLabel(dateKey)}</h3>
+                <div className="flex flex-col space-y-2">
+                  {groupedOrderNotifications[dateKey].map((notification) => (
+                    <OrderNotificationCard
+                      key={notification.id}
+                      notification={notification} // ✅ Pass full notification to OrderNotificationCard
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+        ) : (
+          <p className="text-gray-500 text-center">No order notifications found</p>
         )}
       </div>
     </div>
