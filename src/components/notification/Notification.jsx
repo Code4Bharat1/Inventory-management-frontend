@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import NotificationCard from "./NotificationCard";
-import OrderNotificationCard from "./OrderNotificationCard"; // ✅ Added for order notifications
+import OrderNotificationCard from "./OrderNotificationCard";
 import Search from "../inventory/SearchBar.jsx";
 
 const base_url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -39,46 +39,34 @@ function getDateLabel(dateString) {
 
 export default function Notification() {
   const [productNotifications, setProductNotifications] = useState([]);
-  const [orderNotifications, setOrderNotifications] = useState([]); // ✅ Added for order notifications
+  const [orderNotifications, setOrderNotifications] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const ownerId = "user_001"; // ✅ Replace with your ownerId or fetch dynamically
-
-  // Fetch product notifications
+  // Fetch ALL notifications once and split them
   useEffect(() => {
-    const fetchProductNotifications = async () => {
+    const fetchNotifications = async () => {
       try {
         const token = localStorage.getItem("token");
         if (token) {
           axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         }
-        const response = await axios.get(`${base_url}/api/notification`);
-        setProductNotifications(response.data || []);
+        const response = await axios.get(`${base_url}/api/notifications`);
+        const notifications = response.data?.data || [];
+
+        const products = notifications.filter(n => n.source === "notification");
+        const orders = notifications.filter(n => n.source === "orderNotification");
+
+        setProductNotifications(products);
+        setOrderNotifications(orders);
       } catch (error) {
-        console.error("Failed to fetch product notifications:", error.response?.data || error.message);
-        alert("Failed to fetch product notifications: " + (error.response?.data?.error || error.message));
+        console.error("Failed to fetch notifications:", error.response?.data || error.message);
+        alert("Failed to fetch notifications: " + (error.response?.data?.error || error.message));
       }
     };
-    fetchProductNotifications();
+
+    fetchNotifications();
   }, []);
 
-  // ✅ Fetch order notifications
-  useEffect(() => {
-    const fetchOrderNotifications = async () => {
-      try {
-        const response = await axios.get(`${base_url}/api/notifications`, {
-          params: { ownerId },
-        });
-        setOrderNotifications(response.data || []);
-      } catch (error) {
-        console.error("Failed to fetch order notifications:", error.response?.data || error.message);
-        alert("Failed to fetch order notifications: " + (error.response?.data?.error || error.message));
-      }
-    };
-    fetchOrderNotifications();
-  }, []);
-
-  // Toggle read/unread for product notifications
   const handleMarkAsRead = async (notificationId, currentIsRead, title) => {
     try {
       const token = localStorage.getItem("token");
@@ -86,7 +74,7 @@ export default function Notification() {
         throw new Error("No authentication token found.");
       }
       await axios.patch(
-        `${base_url}/api/notification/${notificationId}/read`,
+        `${base_url}/api/notifications/${notificationId}/read`,
         { isRead: !currentIsRead },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -108,7 +96,7 @@ export default function Notification() {
   );
 
   const groupedProductNotifications = groupNotificationsByDate(filteredProductNotifications);
-  const groupedOrderNotifications = groupNotificationsByDate(orderNotifications); // ✅ Grouping for order notifications
+  const groupedOrderNotifications = groupNotificationsByDate(orderNotifications);
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -120,7 +108,7 @@ export default function Notification() {
         <Search value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
       </div>
 
-      {/* ✅ Product Notifications Section */}
+      {/* Product Notifications */}
       <h2 className="text-xl font-semibold mt-6 mb-2">Product Notifications</h2>
       <div className="px-4 flex flex-col space-y-4">
         {Object.keys(groupedProductNotifications).length > 0 ? (
@@ -151,7 +139,7 @@ export default function Notification() {
         )}
       </div>
 
-      {/* ✅ Order Notifications Section */}
+      {/* Order Notifications */}
       <h2 className="text-xl font-semibold mt-10 mb-2">Order Notifications</h2>
       <div className="px-4 flex flex-col space-y-4">
         {Object.keys(groupedOrderNotifications).length > 0 ? (
@@ -164,7 +152,7 @@ export default function Notification() {
                   {groupedOrderNotifications[dateKey].map((notification) => (
                     <OrderNotificationCard
                       key={notification.id}
-                      notification={notification} // ✅ Pass full notification to OrderNotificationCard
+                      notification={notification}
                     />
                   ))}
                 </div>

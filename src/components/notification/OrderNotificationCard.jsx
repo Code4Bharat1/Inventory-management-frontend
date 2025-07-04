@@ -1,30 +1,55 @@
+"use client";
+
 import React, { useState } from "react";
 import axios from "axios";
 
 export default function OrderNotificationCard({ notification }) {
-  const [status, setStatus] = useState(notification.status);
+  const [status, setStatus] = useState(
+    notification.status ?? notification.order?.status ?? "PENDING"
+  );
   const [loading, setLoading] = useState(false);
+
   const isPending = status === "PENDING";
 
   const handleResponse = async (responseStatus) => {
     try {
       setLoading(true);
+
+      // Retrieve token for secure API call
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("You are not logged in.");
+        setLoading(false);
+        return;
+      }
+      console.log(notification);
+
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${notification.id}/respond`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/notifications/respond`,
         {
+          orderId: notification.order?.id,
           status: responseStatus,
           message:
             responseStatus === "ACCEPTED"
               ? "Order accepted and ready."
               : "Order rejected due to stock issues.",
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
+
       setStatus(responseStatus);
     } catch (error) {
-      console.error("Error updating notification:", error);
-      alert("Error updating notification. Check console for details.");
-    } finally {
-      setLoading(false);
+      console.error(
+        "Error updating notification:",
+        error.response?.data || error.message || error
+      );
+      alert(
+        `Failed to update notification: ${
+          error.response?.data?.error || error.message || "Unknown error"
+        }`
+      );
     }
   };
 
@@ -42,8 +67,16 @@ export default function OrderNotificationCard({ notification }) {
         <span className="text-sm font-semibold text-gray-800">
           Order Notification: {notification.id}
         </span>
+        <span className="text-xs text-gray-600">Status: {status}</span>
         <span className="text-xs text-gray-600">
-          Status: {status}
+          Shop: {notification.shop?.name ?? "N/A"}
+        </span>
+        <span className="text-xs text-gray-600">
+          Order Total: SAR {notification.order?.totalAmount ?? "N/A"}
+        </span>
+        <span className="text-xs text-gray-600">
+          Customer: {notification.order?.user?.name ?? "N/A"} (
+          {notification.order?.user?.email ?? "N/A"})
         </span>
       </div>
 
@@ -78,12 +111,3 @@ export default function OrderNotificationCard({ notification }) {
     </div>
   );
 }
-
-
-    
-
-
-
-
-
-
