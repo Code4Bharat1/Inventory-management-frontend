@@ -7,10 +7,12 @@ import { useParams } from "next/navigation";
 
 const base_url = process.env.NEXT_PUBLIC_API_URL;
 const PRODUCT_API_URL = `${base_url}/api/products/get-products`;
-const ADD_PRODUCT_API_URL = `${base_url}/api/store/category/add-product`;
+const ADD_PRODUCT_API_URL = `${base_url}/api/store/category/product`;
+const GET_ASSIGNED_PRODUCTS_API_URL = `${base_url}/api/store/category/product`;
 
 export default function AddProductsToCategory() {
   const [inventoryProducts, setInventoryProducts] = useState([]);
+  const [assignedProductIds, setAssignedProductIds] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const params = useParams();
@@ -19,6 +21,7 @@ export default function AddProductsToCategory() {
   useEffect(() => {
     if (categoryId) {
       fetchInventoryProducts();
+      fetchAssignedProducts();
     }
   }, [categoryId]);
 
@@ -29,11 +32,10 @@ export default function AddProductsToCategory() {
 
   const fetchInventoryProducts = async () => {
     try {
-      const res = await axios.get(PRODUCT_API_URL, {
-        headers: getAuthHeader(),
-      });
-      console.log("Fetched products:", res.data);
-
+      const res = await axios.get(
+        PRODUCT_API_URL,
+        { headers: getAuthHeader() }
+      );
       if (Array.isArray(res.data)) {
         setInventoryProducts(res.data);
       } else if (res.data.products) {
@@ -47,6 +49,20 @@ export default function AddProductsToCategory() {
     }
   };
 
+  const fetchAssignedProducts = async () => {
+    try {
+      const res = await axios.post(
+        GET_ASSIGNED_PRODUCTS_API_URL,
+        { categoryId },
+        { headers: getAuthHeader() }
+      );
+      const ids = res.data.products.map((p) => p.id);
+      setAssignedProductIds(ids);
+    } catch (error) {
+      console.error("Error fetching assigned products:", error);
+    }
+  };
+
   const handleAddProduct = async (productId) => {
     if (!categoryId) {
       alert("Category ID not found in URL path.");
@@ -57,10 +73,11 @@ export default function AddProductsToCategory() {
     try {
       await axios.post(
         ADD_PRODUCT_API_URL,
-        { categoryId, productId },
+        { categoryId, productIds: [productId] },
         { headers: getAuthHeader() }
       );
       alert("Product added to category successfully!");
+      fetchAssignedProducts();
     } catch (error) {
       console.error("Error adding product:", error);
       alert(error.response?.data?.error || error.message);
@@ -73,8 +90,7 @@ export default function AddProductsToCategory() {
     <div className="min-h-screen bg-white px-4 py-8 flex flex-col items-center">
       <div className="w-full max-w-6xl">
         <h1 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <LayoutList className="w-6 h-6 text-blue-600" />
-          Add Products to Category
+          <LayoutList className="w-6 h-6 text-blue-600" /> Add Products to Category
         </h1>
 
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -111,10 +127,14 @@ export default function AddProductsToCategory() {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleAddProduct(product.id)}
-                        disabled={loading}
-                        className="px-3 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700 transition flex items-center gap-1"
+                        disabled={loading || assignedProductIds.includes(product.id)}
+                        className={`px-3 py-1 rounded-md text-xs flex items-center gap-1 transition ${
+                          assignedProductIds.includes(product.id)
+                            ? "bg-gray-400 text-white cursor-not-allowed"
+                            : "bg-green-600 text-white hover:bg-green-700"
+                        }`}
                       >
-                        <CheckCircle className="w-4 h-4" /> Add
+                        <CheckCircle className="w-4 h-4" /> {assignedProductIds.includes(product.id) ? "Added" : "Add"}
                       </button>
                     </td>
                   </tr>
