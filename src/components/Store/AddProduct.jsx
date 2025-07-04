@@ -2,32 +2,29 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { LayoutList, CheckCircle, XCircle } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { LayoutList, CheckCircle } from "lucide-react";
+import { useParams } from "next/navigation";
 
-const PRODUCT_API_URL = `http://localhost:8080/api/products/get-products`;
-const CATEGORY_PRODUCTS_API_URL = `http://localhost:8080/api/store/category/products`;
-const ADD_PRODUCT_API_URL = `http://localhost:8080/api/store/category/add-product`;
-const REMOVE_PRODUCT_API_URL = `http://localhost:8080/api/store/category/remove-product`;
+const base_url = process.env.NEXT_PUBLIC_API_URL;
+const PRODUCT_API_URL = `${base_url}/api/products/get-products`;
+const ADD_PRODUCT_API_URL = `${base_url}/api/store/category/add-product`;
 
-export default function AddRemoveProductsToCategory() {
+export default function AddProductsToCategory() {
   const [inventoryProducts, setInventoryProducts] = useState([]);
-  const [categoryProducts, setCategoryProducts] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const searchParams = useSearchParams();
-  const categoryId = searchParams.get("id");
+  const params = useParams();
+  const categoryId = params.categoryId;
 
   useEffect(() => {
     if (categoryId) {
       fetchInventoryProducts();
-      fetchCategoryProducts();
     }
   }, [categoryId]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
-    return { Authorization: `Bearer ${token}` };
+    return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
   const fetchInventoryProducts = async () => {
@@ -35,26 +32,27 @@ export default function AddRemoveProductsToCategory() {
       const res = await axios.get(PRODUCT_API_URL, {
         headers: getAuthHeader(),
       });
-      setInventoryProducts(res.data.products || []);
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || error.message);
-    }
-  };
+      console.log("Fetched products:", res.data);
 
-  const fetchCategoryProducts = async () => {
-    try {
-      const res = await axios.get(`${CATEGORY_PRODUCTS_API_URL}/${categoryId}`, {
-        headers: getAuthHeader(),
-      });
-      setCategoryProducts(res.data.products || []);
+      if (Array.isArray(res.data)) {
+        setInventoryProducts(res.data);
+      } else if (res.data.products) {
+        setInventoryProducts(res.data.products);
+      } else {
+        console.error("Unexpected API response structure:", res.data);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching products:", error);
       alert(error.response?.data?.message || error.message);
     }
   };
 
   const handleAddProduct = async (productId) => {
+    if (!categoryId) {
+      alert("Category ID not found in URL path.");
+      return;
+    }
+
     setLoading(true);
     try {
       await axios.post(
@@ -62,48 +60,34 @@ export default function AddRemoveProductsToCategory() {
         { categoryId, productId },
         { headers: getAuthHeader() }
       );
-      fetchCategoryProducts();
+      alert("Product added to category successfully!");
     } catch (error) {
+      console.error("Error adding product:", error);
       alert(error.response?.data?.error || error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRemoveProduct = async (productId) => {
-    setLoading(true);
-    try {
-      await axios.post(
-        REMOVE_PRODUCT_API_URL,
-        { categoryId, productId },
-        { headers: getAuthHeader() }
-      );
-      fetchCategoryProducts();
-    } catch (error) {
-      alert(error.response?.data?.error || error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const isProductInCategory = (productId) => {
-    return categoryProducts.some((product) => product.id === productId);
   };
 
   return (
     <div className="min-h-screen bg-white px-4 py-8 flex flex-col items-center">
-      <div className="w-full max-w-5xl">
+      <div className="w-full max-w-6xl">
         <h1 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <LayoutList className="w-6 h-6 text-blue-600" /> Manage Products in Category
+          <LayoutList className="w-6 h-6 text-blue-600" />
+          Add Products to Category
         </h1>
 
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
           <table className="min-w-full text-sm text-left text-gray-700">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="px-4 py-3 font-medium">Image</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Description</th>
+                <th className="px-4 py-3 font-medium">Category</th>
                 <th className="px-4 py-3 font-medium">Price</th>
+                <th className="px-4 py-3 font-medium">Quantity</th>
+                <th className="px-4 py-3 font-medium">SKU</th>
                 <th className="px-4 py-3 font-medium text-right">Action</th>
               </tr>
             </thead>
@@ -111,34 +95,34 @@ export default function AddRemoveProductsToCategory() {
               {inventoryProducts.length > 0 ? (
                 inventoryProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-3">
+                      <img
+                        src={product.imageUrl || "/default-product.png"}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    </td>
                     <td className="px-4 py-3">{product.name}</td>
                     <td className="px-4 py-3 max-w-xs truncate">{product.description}</td>
+                    <td className="px-4 py-3">{product.category}</td>
                     <td className="px-4 py-3">${product.price}</td>
+                    <td className="px-4 py-3">{product.quantity}</td>
+                    <td className="px-4 py-3">{product.sku || "N/A"}</td>
                     <td className="px-4 py-3 text-right">
-                      {isProductInCategory(product.id) ? (
-                        <button
-                          onClick={() => handleRemoveProduct(product.id)}
-                          disabled={loading}
-                          className="px-3 py-1 bg-red-600 text-white rounded-md text-xs hover:bg-red-700 transition flex items-center gap-1"
-                        >
-                          <XCircle className="w-4 h-4" /> Remove
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleAddProduct(product.id)}
-                          disabled={loading}
-                          className="px-3 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700 transition flex items-center gap-1"
-                        >
-                          <CheckCircle className="w-4 h-4" /> Add
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleAddProduct(product.id)}
+                        disabled={loading}
+                        className="px-3 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700 transition flex items-center gap-1"
+                      >
+                        <CheckCircle className="w-4 h-4" /> Add
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
-                    No products in inventory.
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
+                    No products found.
                   </td>
                 </tr>
               )}
