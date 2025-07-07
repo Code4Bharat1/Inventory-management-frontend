@@ -96,6 +96,7 @@ const Table = () => {
   const confirmDelete = async () => {
     if (!selectedProduct) return;
     setDeleting(true);
+    console.log(selectedProduct.id)
     try {
       await axios.delete(
         `${process.env.NEXT_PUBLIC_API_URL}/api/products/${selectedProduct.id}`
