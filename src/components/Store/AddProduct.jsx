@@ -9,7 +9,7 @@ const base_url = process.env.NEXT_PUBLIC_API_URL;
 const PRODUCT_API_URL = `${base_url}/api/products/get-products`;
 const ADD_PRODUCT_API_URL = `${base_url}/api/store/category/product`;
 const REMOVE_PRODUCT_API_URL = `${base_url}/api/store/category/product`;
-const GET_ASSIGNED_PRODUCTS_API_URL = `${base_url}/api/store/category/product`;
+const GET_ASSIGNED_PRODUCTS_API_URL = `${base_url}/api/store/category`;
 
 export default function AddProductsToCategory() {
   const [inventoryProducts, setInventoryProducts] = useState([]);
@@ -50,24 +50,26 @@ export default function AddProductsToCategory() {
     }
   };
 
-  const fetchAssignedProducts = async () => {
-    try {
-      const res = await axios.get(
-        GET_ASSIGNED_PRODUCTS_API_URL,
-        { query : {categoryId : categoryId} },
-        { headers: getAuthHeader() }
-        
-      );
-      console.log(res)
-      const ids = res.data.products.map((p) => p.id);
-      setAssignedProductIds(ids);
-    } catch (error) {
-      console.error("Error fetching assigned products:", error);
-      setActionStatus({
-        general: { type: "error", message: "Failed to fetch assigned products." },
-      });
-    }
-  };
+ const fetchAssignedProducts = async () => {
+  try {
+    const res = await axios.get(GET_ASSIGNED_PRODUCTS_API_URL, {
+      params: { categoryId }, // This adds ?categoryId=xxx to the URL
+      headers: getAuthHeader()
+    });
+
+    // Safe optional chaining in case products is undefined
+    const products = res?.data?.products ?? [];
+    const ids = products.map((p) => p.id);
+
+    setAssignedProductIds(ids);
+  } catch (error) {
+    console.error("Error fetching assigned products:", error);
+    setActionStatus({
+      general: { type: "error", message: "Failed to fetch assigned products." },
+    });
+  }
+};
+
 
   const handleAddProduct = async (productId) => {
     if (!categoryId) {
